@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const connectDB = require('./config/db');
+const authRoutes = require("./routes/authRoutes")
 
 const app = express();
 
@@ -10,6 +11,7 @@ const app = express();
 // Use CORS and JSON parsing middleware
 app.use(cors());
 app.use(express.json());
+app.use('/auth', authRoutes);
 
 // Routes
 app.get('/', (req, res) => res.send('API is running...'));
