@@ -1,9 +1,13 @@
 // Review routes
 const express = require('express');
 const router = express.Router();
-const reviewController = require('../controllers/reviewController');
+const auth = require('../middleware/auth');
+const { createReview, getReviews, getMyLatestReview, updateReview, deleteReview } = require('../controllers/reviewController');
 
-// Define review routes here
-// Example: router.post('/', reviewController.createReview);
+router.post('/', auth, createReview);
+router.get('/', getReviews);
+router.get('/my-latest', auth, getMyLatestReview);
+router.put('/:reviewId', auth, updateReview);    // Edit review
+router.delete('/:reviewId', auth, deleteReview); // Delete review
 
 module.exports = router;
