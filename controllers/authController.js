@@ -93,11 +93,18 @@ exports.verifyOTP = async (req, res) => {
     user.isVerified = true;
     user.OTPHash = undefined;
     user.OTPExpiry = undefined;
+
+    // Assign admin role if email is in allowed list
+    if (ALLOWED_ADMIN_EMAILS.includes(email)) {
+        user.role = 'admin';
+    } else {
+        user.role = 'user';
+    }
     await user.save();
 
     // Issue JWT
     const token = jwt.sign(
-      { userId: user._id.toString(), email: user.email },
+      { userId: user._id.toString(), email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
