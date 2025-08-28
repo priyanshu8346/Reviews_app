@@ -3,9 +3,12 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
 const {  listReviews, markSpam, getStats } = require('../controllers/adminController');
+const { requestAdminOTP, verifyAdminOTP } = require('../controllers/adminAuthController');
 
 router.get('/reviews', auth, admin, listReviews);
 router.patch('/reviews/:id/spam', auth, admin, markSpam);
 router.get('/stats', auth, admin, getStats);
+router.post('/send-otp',  requestAdminOTP);
+router.post('/verify-otp',verifyAdminOTP);
 
 module.exports = router;

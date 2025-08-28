@@ -2,9 +2,9 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
 const nodemailer = require('nodemailer');
-const { adminEmails } = require('../config');
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkey';
 const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim().toLowerCase()) : [];
+
 
 function makeTransporter() {
   // Generic SMTP (works great with Ethereal or any SMTP)
@@ -31,8 +31,9 @@ function generateOTP() {
 }
 
 // Step 1: Request OTP
-exports.requestAdminOtp = async (req, res) => {
+exports.requestAdminOTP = async (req, res) => {
   try {
+    // console.log(req.body);
     const { email } = req.body;
     const normalizedEmail = email.toLowerCase();
 
@@ -73,6 +74,9 @@ exports.requestAdminOtp = async (req, res) => {
     
         // If using Ethereal, you can log the preview URL for testing:
         console.log('Preview URL:', nodemailer.getTestMessageUrl(info));
+
+    
+        return res.json({ success: true, message: "OTP sent succesfully" });
     
 
   } catch (err) {
@@ -82,7 +86,7 @@ exports.requestAdminOtp = async (req, res) => {
 };
 
 // Step 2: Verify OTP
-exports.verifyAdminOtp = async (req, res) => {
+exports.verifyAdminOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
     const normalizedEmail = email.toLowerCase();
@@ -97,9 +101,18 @@ exports.verifyAdminOtp = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Admin not found, request OTP again' });
     }
 
-    if (!user.OTP || user.OTPHash !== hashOTP(otp) || user.OTPExpiry < Date.now()) {
-      return res.status(400).json({ success: false, error: 'Invalid or expired OTP' });
-    }
+        if (!user || !user.OTPHash || !user.OTPExpiry) {
+          return res.status(400).json({ error: 'OTP not requested or user not found' });
+        }
+    
+        if (user.OTPExpiry < new Date()) {
+          return res.status(400).json({ error: 'OTP expired' });
+        }
+    
+        const isMatch = user.OTPHash === hashOTP(otp);
+        if (!isMatch) {
+          return res.status(400).json({ error: 'Invalid OTP' });
+        }
 
     // Clear OTP after success
     user.OTP = undefined;

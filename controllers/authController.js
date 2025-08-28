@@ -43,7 +43,7 @@ exports.sendOTP = async (req, res) => {
 
         const user = await User.findOneAndUpdate(
         {email },
-        { OTPHash, OTPExpiry, isVerified: false },
+        { OTPHash, OTPExpiry, isVerified: false, role: 'user' }, // default role as 'user'
         { new: true, upsert: true }
     )
 
@@ -94,12 +94,6 @@ exports.verifyOTP = async (req, res) => {
     user.OTPHash = undefined;
     user.OTPExpiry = undefined;
 
-    // Assign admin role if email is in allowed list
-    if (ALLOWED_ADMIN_EMAILS.includes(email)) {
-        user.role = 'admin';
-    } else {
-        user.role = 'user';
-    }
     await user.save();
 
     // Issue JWT

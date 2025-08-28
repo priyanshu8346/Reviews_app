@@ -59,10 +59,9 @@ exports.createReview = async (req, res) => {
     if (!text || !rating) {
       return res.status(400).json({ error: 'Text and rating are required' });
     }
-
     // Call Python AI microservice
     const aiResponse = await axios.post('http://localhost:8000/analyze', { text });
-    const { sentiment, score, spam,  } = aiResponse.data;
+    const { sentiment, score, spam, problems, goodPoints  } = aiResponse.data;
 
     // Save review with AI data
     const review = new Review({
