@@ -16,13 +16,37 @@ exports.listReviews = async (req, res) => {
 
     const total = await Review.countDocuments(filter);
 
-    res.json({ 
-      success: true, 
-      total, 
-      page: Number(page), 
-      limit: Number(limit), 
-      reviews 
+    const ratingCounts = await Review.aggregate([
+  { $match: filter },
+  { $group: { _id: "$rating", count: { $sum: 1 } } },
+  { $project: { _id: 0, rating: "$_id", count: 1 } }
+]);
+
+// Normalize to always have 1–5 keys
+const counts = { 1:0, 2:0, 3:0, 4:0, 5:0 };
+ratingCounts.forEach(r => { counts[r.rating] = r.count; });
+
+// Sentiment distribution
+    const sentimentAgg = await Review.aggregate([
+      { $match: filter },
+      { $group: { _id: "$sentiment", count: { $sum: 1 } } }
+    ]);
+
+    const sentimentCounts = ["positive", "neutral", "negative"].map(s => {
+      const found = sentimentAgg.find(x => x._id === s);
+      return { name: s.charAt(0).toUpperCase() + s.slice(1), value: found ? found.count : 0 };
     });
+
+res.json({ 
+  success: true, 
+  total, 
+  page: Number(page), 
+  limit: Number(limit), 
+  reviews,
+  ratingDistribution: counts,
+  satisfaction: sentimentCounts
+});
+
   } catch (err) {
     console.error("Error in listReviews:", err);
     res.status(500).json({ success: false, error: 'Failed to fetch reviews' });
@@ -56,58 +80,101 @@ exports.markSpam = async (req, res) => {
   }
 };
 
-// 3. Get overall stats with AI insights
-exports.getStats = async (req, res) => {
+exports.summary = async (req, res) => {
   try {
-    // total reviews & spam count
-    const totalReviews = await Review.countDocuments();
-    const spamCount = await Review.countDocuments({ spam: true });
+    // 1. Fetch all reviews from DB
+    const reviews = await Review.find({});
+    if (!reviews.length) {
+      return res.json({ success: true, insights: { problems: [], goodPoints: [], summary: "No reviews yet" } });
+    }
 
-    // sentiment breakdown
-    const sentimentAgg = await Review.aggregate([
-      { $group: { _id: "$sentiment", count: { $sum: 1 } } }
-    ]);
-    const sentiments = sentimentAgg.reduce((acc, s) => {
-      acc[s._id] = s.count;
+    // 2. Aggregate raw problems and good points
+    const allProblems = [];
+    const allGoodPoints = [];
+
+    reviews.forEach(r => {
+      if (Array.isArray(r.problems)) allProblems.push(...r.problems);
+      if (Array.isArray(r.goodPoints)) allGoodPoints.push(...r.goodPoints);
+    });
+
+    // Optionally count occurrences
+    const countItems = arr => arr.reduce((acc, item) => {
+      acc[item] = (acc[item] || 0) + 1;
       return acc;
-    }, { positive: 0, neutral: 0, negative: 0 });
+    }, {});
+    const problemCounts = countItems(allProblems);
+    const goodPointCounts = countItems(allGoodPoints);
 
-    // average AI score for non-spam reviews
-    const avgScoreAgg = await Review.aggregate([
-      { $match: { spam: false } },
-      { $group: { _id: null, avgScore: { $avg: "$aiScore" } } }
-    ]);
-    const avgAiScore = avgScoreAgg.length > 0 ? avgScoreAgg[0].avgScore : 0;
+    // 3. Call Python AI microservice to generate summary
+    const aiResponse = await axios.post('http://localhost:8000/summary', {
+      problems: allProblems,
+      goodPoints: allGoodPoints
+    });
 
-    // top 3 problems
-    const topProblems = await Review.aggregate([
-      { $unwind: "$problems" },
-      { $group: { _id: "$problems", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 3 }
-    ]);
+    const { summary} = aiResponse.data;
 
-    // top 3 good points
-    const topGoodPoints = await Review.aggregate([
-      { $unwind: "$goodPoints" },
-      { $group: { _id: "$goodPoints", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 3 }
-    ]);
-
+    // 4. Return combined insights
     res.json({
       success: true,
-      stats: {
-        totalReviews,
-        spamCount,
-        sentiments,
-        avgAiScore: Number(avgAiScore.toFixed(2)),
-        topProblems: topProblems.map(p => ({ text: p._id, count: p.count })),
-        topGoodPoints: topGoodPoints.map(g => ({ text: g._id, count: g.count }))
+      insights: {
+        problemCounts,
+        goodPointCounts,
+        summary
       }
     });
+
   } catch (err) {
-    console.error("Error in getStats:", err);
-    res.status(500).json({ success: false, error: 'Failed to fetch stats' });
+    console.error('summary error:', err);
+    res.status(500).json({ success: false, error: 'Failed to fetch summary' });
+  }
+};
+
+
+exports.getSuggestions = async (req, res) => {
+  try {
+    // 1. Fetch all reviews from DB
+    const reviews = await Review.find({});
+    if (!reviews.length) {
+      return res.json({ success: true, insights: { problems: [], goodPoints: [], suggestions: "No reviews yet" } });
+    }
+
+    // 2. Aggregate raw problems and good points
+    const allProblems = [];
+    const allGoodPoints = [];
+
+    reviews.forEach(r => {
+      if (Array.isArray(r.problems)) allProblems.push(...r.problems);
+      if (Array.isArray(r.goodPoints)) allGoodPoints.push(...r.goodPoints);
+    });
+
+    // Optionally count occurrences
+    const countItems = arr => arr.reduce((acc, item) => {
+      acc[item] = (acc[item] || 0) + 1;
+      return acc;
+    }, {});
+    const problemCounts = countItems(allProblems);
+    const goodPointCounts = countItems(allGoodPoints);
+
+    // 3. Call Python AI microservice to generate summary
+    const aiResponse = await axios.post('http://localhost:8000/suggestions', {
+      problems: allProblems,
+      goodPoints: allGoodPoints
+    });
+
+    const { suggestions} = aiResponse.data;
+
+    // 4. Return combined insights
+    res.json({
+      success: true,
+      insights: {
+        problemCounts,
+        goodPointCounts,
+        suggestions
+      }
+    });
+
+  } catch (err) {
+    console.error('suggestions error:', err);
+    res.status(500).json({ success: false, error: 'Failed to fetch suggestions' });
   }
 };

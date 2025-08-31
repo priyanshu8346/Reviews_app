@@ -2,54 +2,7 @@
 const Review = require('../models/Review');
 const axios = require('axios');
 
-exports.getInsights = async (req, res) => {
-  try {
-    // 1. Fetch all reviews from DB
-    const reviews = await Review.find({});
-    if (!reviews.length) {
-      return res.json({ success: true, insights: { problems: [], goodPoints: [], summary: "No reviews yet" } });
-    }
 
-    // 2. Aggregate raw problems and good points
-    const allProblems = [];
-    const allGoodPoints = [];
-
-    reviews.forEach(r => {
-      if (Array.isArray(r.problems)) allProblems.push(...r.problems);
-      if (Array.isArray(r.goodPoints)) allGoodPoints.push(...r.goodPoints);
-    });
-
-    // Optionally count occurrences
-    const countItems = arr => arr.reduce((acc, item) => {
-      acc[item] = (acc[item] || 0) + 1;
-      return acc;
-    }, {});
-    const problemCounts = countItems(allProblems);
-    const goodPointCounts = countItems(allGoodPoints);
-
-    // 3. Call Python AI microservice to generate summary
-    const aiResponse = await axios.post('http://localhost:8000/insights', {
-      problems: allProblems,
-      goodPoints: allGoodPoints
-    });
-
-    const { summary } = aiResponse.data;
-
-    // 4. Return combined insights
-    res.json({
-      success: true,
-      insights: {
-        problemCounts,
-        goodPointCounts,
-        summary
-      }
-    });
-
-  } catch (err) {
-    console.error('getInsights error:', err);
-    res.status(500).json({ success: false, error: 'Failed to fetch insights' });
-  }
-};
 
 
 /** POST /reviews  { text, rating } */

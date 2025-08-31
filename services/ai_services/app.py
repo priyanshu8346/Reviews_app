@@ -55,7 +55,7 @@ def analyze_review():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/insights', methods=['POST'])
+@app.route('/summary', methods=['POST'])
 def summarize_reviews():
     try:
         data = request.get_json(silent=True) or {}
@@ -84,6 +84,38 @@ def summarize_reviews():
         # Optional fence cleanup
         clean_text = re.sub(r"^```json\s*|\s*```$", "", result_text, flags=re.MULTILINE)
 
+        result = json.loads(clean_text)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/suggestions', methods=['POST'])
+def improvement_suggestions():
+    try:
+        data = request.get_json(silent=True) or {}
+        problems = data.get('problems', [])
+        good_points = data.get('goodPoints', [])
+
+        if not problems and not good_points:
+            return jsonify({"suggestions": ["No reviews available to analyze."]})
+
+        prompt = f"""
+        Based on the following customer feedback, suggest actionable steps to improve the service.
+        Problems reported: {problems}
+        Good points mentioned: {good_points}
+
+        Return STRICT JSON with:
+        suggestions: an array of 3–5 concrete improvement actions.
+        """
+
+        resp = client.responses.create(
+            model="gpt-4o",
+            input=prompt,
+            temperature=0
+        )
+
+        result_text = resp.output_text.strip()
+        clean_text = re.sub(r"^```json\s*|\s*```$", "", result_text, flags=re.MULTILINE)
         result = json.loads(clean_text)
         return jsonify(result)
     except Exception as e:
