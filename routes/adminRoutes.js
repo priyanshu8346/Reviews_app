@@ -9,8 +9,8 @@ router.get('/reviews', auth, admin, listReviews);
 router.patch('/reviews/:id/spam', auth, admin, markSpam);
 router.post('/send-otp',  requestAdminOTP);
 router.post('/verify-otp',verifyAdminOTP);
-router.post('/summary', auth, admin, summary)
-router.post('/suggestions', auth, getSuggestions)
+router.get('/summary', auth, admin, summary)
+router.get('/suggestions', auth, getSuggestions)
 
 
 module.exports = router;

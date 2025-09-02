@@ -58,35 +58,67 @@ def analyze_review():
 @app.route('/summary', methods=['POST'])
 def summarize_reviews():
     try:
+        print("=== SUMMARY ENDPOINT CALLED ===")
         data = request.get_json(silent=True) or {}
+        print(f"Raw request data: {data}")
+        
         problems = data.get('problems', [])
         good_points = data.get('goodPoints', [])
+        
+        print(f"Problems: {problems}")
+        print(f"Good points: {good_points}")
+        print(f"Problems count: {len(problems)}, Good points count: {len(good_points)}")
 
         if not problems and not good_points:
+            print("No data provided - returning empty summary")
             return jsonify({"summary": "No reviews available yet."})
+
+        # Limit data to avoid token issues
+        limited_problems = problems[:50]
+        limited_good_points = good_points[:50]
+        
+        print(f"Limited - Problems: {limited_problems[:3]}...")
+        print(f"Limited - Good points: {limited_good_points[:3]}...")
 
         prompt = f"""
         Summarize the following customer feedback into clear insights.
-        Problems reported: {problems}
-        Good points mentioned: {good_points}
+        Problems reported: {limited_problems}
+        Good points mentioned: {limited_good_points}
 
         Return STRICT JSON with:
         summary: a short text summarizing the top complaints and top praises.
         """
 
+        print("Calling OpenAI API...")
         resp = client.responses.create(
             model="gpt-4o",
             input=prompt,
-            temperature=0
+            temperature=0,
+            max_tokens=300  # Limit response size
         )
 
         result_text = resp.output_text.strip()
-        # Optional fence cleanup
+        print(f"Raw OpenAI response: {result_text}")
+        
+        # Clean the response
         clean_text = re.sub(r"^```json\s*|\s*```$", "", result_text, flags=re.MULTILINE)
+        print(f"Cleaned response: {clean_text}")
 
         result = json.loads(clean_text)
+        print(f"Parsed JSON: {result}")
+        
         return jsonify(result)
+        
+    except json.JSONDecodeError as e:
+        print(f"JSON Decode Error: {e}")
+        print(f"Problematic text: {clean_text}")
+        return jsonify({
+            "summary": f"Analysis complete: {len(problems)} issues, {len(good_points)} positives found."
+        })
+        
     except Exception as e:
+        print(f"Error in summarize_reviews: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
         return jsonify({"error": str(e)}), 500
     
 @app.route('/suggestions', methods=['POST'])

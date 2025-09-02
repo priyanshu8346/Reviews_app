@@ -1,4 +1,5 @@
 const Review = require('../models/Review');
+const axios = require('axios');
 
 // 1. List reviews (with filters & pagination)
 exports.listReviews = async (req, res) => {
@@ -82,13 +83,20 @@ exports.markSpam = async (req, res) => {
 
 exports.summary = async (req, res) => {
   try {
-    // 1. Fetch all reviews from DB
+    console.log("1. Fetching reviews from DB...");
     const reviews = await Review.find({});
+    console.log(`Found ${reviews.length} reviews`);
+    
     if (!reviews.length) {
-      return res.json({ success: true, insights: { problems: [], goodPoints: [], summary: "No reviews yet" } });
+      return res.json({ 
+        success: true, 
+        insights: { 
+          summary: "No reviews yet" 
+        } 
+      });
     }
 
-    // 2. Aggregate raw problems and good points
+    // 2. Aggregate data
     const allProblems = [];
     const allGoodPoints = [];
 
@@ -97,35 +105,62 @@ exports.summary = async (req, res) => {
       if (Array.isArray(r.goodPoints)) allGoodPoints.push(...r.goodPoints);
     });
 
-    // Optionally count occurrences
-    const countItems = arr => arr.reduce((acc, item) => {
-      acc[item] = (acc[item] || 0) + 1;
-      return acc;
-    }, {});
-    const problemCounts = countItems(allProblems);
-    const goodPointCounts = countItems(allGoodPoints);
+    console.log(`3. Sending to AI: ${allProblems.length} problems, ${allGoodPoints.length} good points`);
 
-    // 3. Call Python AI microservice to generate summary
-    const aiResponse = await axios.post('http://localhost:8000/summary', {
-      problems: allProblems,
-      goodPoints: allGoodPoints
-    });
+    // 3. Call Python service with timeout and better error handling
+    try {
+      const aiResponse = await axios.post('http://localhost:8000/summary', {
+        problems: allProblems.slice(0, 50), // Limit to avoid large requests
+        goodPoints: allGoodPoints.slice(0, 50)
+      }, {
+        timeout: 10000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
 
-    const { summary} = aiResponse.data;
+      console.log("4. AI Response received:", aiResponse.data);
 
-    // 4. Return combined insights
-    res.json({
-      success: true,
-      insights: {
-        problemCounts,
-        goodPointCounts,
-        summary
+      if (aiResponse.data && aiResponse.data.summary) {
+        return res.json({
+          success: true,
+          insights: {
+            summary: aiResponse.data.summary,
+            totalReviews: reviews.length
+          }
+        });
+      } else {
+        console.warn("5. Unexpected AI response structure:", aiResponse.data);
+        throw new Error('Invalid response from AI service');
       }
-    });
+
+    } catch (aiError) {
+      console.error("6. AI Service Error:", aiError.message);
+      
+      if (aiError.code === 'ECONNREFUSED') {
+        console.error("7. Python service not reachable at localhost:8000");
+      }
+      
+      if (aiError.response) {
+        console.error("8. Python service error response:", aiError.response.data);
+      }
+
+      // Fallback summary
+      return res.json({
+        success: true,
+        insights: {
+          summary: `Based on ${reviews.length} reviews: ${allProblems.slice(0, 3).join(', ')} mentioned as areas to improve, and ${allGoodPoints.slice(0, 3).join(', ')} as strengths.`,
+          totalReviews: reviews.length
+        }
+      });
+    }
 
   } catch (err) {
-    console.error('summary error:', err);
-    res.status(500).json({ success: false, error: 'Failed to fetch summary' });
+    console.error('9. Summary endpoint error:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to generate summary'
+    });
   }
 };
 
