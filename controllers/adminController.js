@@ -1,6 +1,8 @@
 const Review = require('../models/Review');
 const axios = require('axios');
 
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+
 // 1. List reviews (with filters & pagination)
 exports.listReviews = async (req, res) => {
   try {
@@ -108,7 +110,7 @@ exports.summary = async (req, res) => {
 
     // 3. Call Python service with timeout and better error handling
     try {
-      const aiResponse = await axios.post('http://localhost:8000/summary', {
+      const aiResponse = await axios.post(`${AI_SERVICE_URL}/summary`, {
         problems: allProblems.slice(0, 50), // Limit to avoid large requests
         goodPoints: allGoodPoints.slice(0, 50)
       }, {
@@ -190,7 +192,7 @@ exports.getSuggestions = async (req, res) => {
     const goodPointCounts = countItems(allGoodPoints);
 
     // 3. Call Python AI microservice to generate summary
-    const aiResponse = await axios.post('http://localhost:8000/suggestions', {
+    const aiResponse = await axios.post(`${AI_SERVICE_URL}/suggestions`, {
       problems: allProblems,
       goodPoints: allGoodPoints
     });

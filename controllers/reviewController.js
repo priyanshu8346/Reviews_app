@@ -2,6 +2,7 @@
 const Review = require('../models/Review');
 const axios = require('axios');
 
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
 
 
@@ -13,7 +14,7 @@ exports.createReview = async (req, res) => {
       return res.status(400).json({ error: 'Text and rating are required' });
     }
     // Call Python AI microservice
-    const aiResponse = await axios.post('http://localhost:8000/analyze', { text });
+    const aiResponse = await axios.post(`${AI_SERVICE_URL}/analyze`, { text });
     const { sentiment, score, spam, problems, goodPoints  } = aiResponse.data;
 
     // Save review with AI data
