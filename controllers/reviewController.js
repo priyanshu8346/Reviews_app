@@ -31,7 +31,7 @@ exports.createReview = async (req, res) => {
 
     res.json({ success: true, review });
   } catch (err) {
-    console.error('createReview error:', err);
+    // console.error('createReview error:', err);
     res.status(500).json({ success: false, error: 'Failed to create review' });
   }
 };
@@ -45,7 +45,7 @@ exports.getReviews = async (req, res) => {
 
     return res.json({ success: true, reviews });
   } catch (err) {
-    console.error('getReviews error:', err);
+    // console.error('getReviews error:', err);
     return res.status(500).json({ error: 'Failed to fetch reviews' });
   }
 };
@@ -62,7 +62,7 @@ exports.getMyLatestReview = async (req, res) => {
 
     return res.json({ success: true, review });
   } catch (err) {
-    console.error('getMyLatestReview error:', err);
+    // console.error('getMyLatestReview error:', err);
     return res.status(500).json({ success: false, error: 'Failed to fetch review' });
   }
 };
@@ -75,10 +75,10 @@ exports.updateReview = async (req, res) => {
     if (!text || !rating) {
       return res.status(400).json({ error: 'New Text and rating are required' });
     }
-    console.log("updateReview called with:", { reviewId, text, rating });
+    // console.log("updateReview called with:", { reviewId, text, rating });
 
     const review = await Review.findOne({ _id: reviewId, user: req.user.userId });
-    console.log("updateReview found review:", review);
+    // console.log("updateReview found review:", review);
     if (!review) return res.status(404).json({ success: false, message: 'Review not found' });
 
     if (text) review.text = text;
@@ -87,7 +87,7 @@ exports.updateReview = async (req, res) => {
     await review.save();
     res.json({ success: true, review });
   } catch (err) {
-    console.error('updateReview error:', err);
+    // console.error('updateReview error:', err);
     return res.status(500).json({ error: 'Failed to update review' });
   }
 };
@@ -95,14 +95,14 @@ exports.updateReview = async (req, res) => {
 // Delete my review
 exports.deleteReview = async (req, res) => {
   try {
-    console.log("deleteReview called with id:", req.params.reviewId);
+    // console.log("deleteReview called with id:", req.params.reviewId);
     const { reviewId } = req.params;
     const deleted = await Review.findOneAndDelete({ _id: reviewId});
     if (!deleted) return res.status(404).json({ success: false, message: 'Review not found' });
 
     res.json({ success: true, message: 'Review deleted' });
   } catch (err) {
-    console.error('deleteReview error:', err);
+    // console.error('deleteReview error:', err);
     res.status(500).json({ success: false, error: 'Failed to delete review' });
   }
 };

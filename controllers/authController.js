@@ -58,11 +58,11 @@ exports.sendOTP = async (req, res) => {
     });
 
     // If using Ethereal, you can log the preview URL for testing:
-    console.log('Preview URL:', nodemailer.getTestMessageUrl(info));
+    // console.log('Preview URL:', nodemailer.getTestMessageUrl(info));
 
     return res.json({ success: true, message: 'OTP sent to email' });
   } catch (err) {
-    console.error('sendOTP error:', err);
+    // console.error('sendOTP error:', err);
     return res.status(500).json({ error: 'Failed to send OTP' });
   }
     }
@@ -105,7 +105,7 @@ exports.verifyOTP = async (req, res) => {
 
     return res.json({ success: true, token });
   } catch (err) {
-    console.error('verifyOTP error:', err);
+    //  console.error('verifyOTP error:', err);
     return res.status(500).json({ error: 'Failed to verify OTP' });
   }
 };

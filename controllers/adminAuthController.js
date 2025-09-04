@@ -33,7 +33,6 @@ function generateOTP() {
 // Step 1: Request OTP
 exports.requestAdminOTP = async (req, res) => {
   try {
-    // console.log(req.body);
     const { email } = req.body;
     const normalizedEmail = email.toLowerCase();
 
@@ -80,7 +79,7 @@ exports.requestAdminOTP = async (req, res) => {
     
 
   } catch (err) {
-    console.error("Error in requestAdminOtp:", err);
+    // console.error("Error in requestAdminOtp:", err);
     res.status(500).json({ success: false, error: 'Failed to send OTP' });
   }
 };
@@ -131,7 +130,7 @@ exports.verifyAdminOTP = async (req, res) => {
     res.json({ success: true, token });
 
   } catch (err) {
-    console.error("Error in verifyAdminOtp:", err);
+    // console.error("Error in verifyAdminOtp:", err);
     res.status(500).json({ success: false, error: 'Failed to verify OTP' });
   }
 };

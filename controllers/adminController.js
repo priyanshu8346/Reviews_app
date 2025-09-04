@@ -49,7 +49,7 @@ res.json({
 });
 
   } catch (err) {
-    console.error("Error in listReviews:", err);
+    // console.error("Error in listReviews:", err);
     res.status(500).json({ success: false, error: 'Failed to fetch reviews' });
   }
 };
@@ -76,16 +76,16 @@ exports.markSpam = async (req, res) => {
 
     res.json({ success: true, review });
   } catch (err) {
-    console.error("Error in markSpam:", err);
+    // console.error("Error in markSpam:", err);
     res.status(500).json({ success: false, error: 'Failed to update review' });
   }
 };
 
 exports.summary = async (req, res) => {
   try {
-    console.log("1. Fetching reviews from DB...");
+    // console.log("1. Fetching reviews from DB...");
     const reviews = await Review.find({});
-    console.log(`Found ${reviews.length} reviews`);
+    // console.log(`Found ${reviews.length} reviews`);
     
     if (!reviews.length) {
       return res.json({ 
@@ -105,7 +105,6 @@ exports.summary = async (req, res) => {
       if (Array.isArray(r.goodPoints)) allGoodPoints.push(...r.goodPoints);
     });
 
-    console.log(`3. Sending to AI: ${allProblems.length} problems, ${allGoodPoints.length} good points`);
 
     // 3. Call Python service with timeout and better error handling
     try {
@@ -119,7 +118,7 @@ exports.summary = async (req, res) => {
         }
       });
 
-      console.log("4. AI Response received:", aiResponse.data);
+      // console.log("4. AI Response received:", aiResponse.data);
 
       if (aiResponse.data && aiResponse.data.summary) {
         return res.json({
@@ -130,12 +129,12 @@ exports.summary = async (req, res) => {
           }
         });
       } else {
-        console.warn("5. Unexpected AI response structure:", aiResponse.data);
+        // console.warn("5. Unexpected AI response structure:", aiResponse.data);
         throw new Error('Invalid response from AI service');
       }
 
     } catch (aiError) {
-      console.error("6. AI Service Error:", aiError.message);
+      // console.error("6. AI Service Error:", aiError.message);
       
       if (aiError.code === 'ECONNREFUSED') {
         console.error("7. Python service not reachable at localhost:8000");
@@ -156,7 +155,7 @@ exports.summary = async (req, res) => {
     }
 
   } catch (err) {
-    console.error('9. Summary endpoint error:', err);
+    // console.error('9. Summary endpoint error:', err);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to generate summary'
@@ -209,7 +208,7 @@ exports.getSuggestions = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('suggestions error:', err);
+    // console.error('suggestions error:', err);
     res.status(500).json({ success: false, error: 'Failed to fetch suggestions' });
   }
 };
