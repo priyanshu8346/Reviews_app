@@ -75,8 +75,10 @@ exports.updateReview = async (req, res) => {
     if (!text || !rating) {
       return res.status(400).json({ error: 'New Text and rating are required' });
     }
+    console.log("updateReview called with:", { reviewId, text, rating });
 
     const review = await Review.findOne({ _id: reviewId, user: req.user.userId });
+    console.log("updateReview found review:", review);
     if (!review) return res.status(404).json({ success: false, message: 'Review not found' });
 
     if (text) review.text = text;
