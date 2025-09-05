@@ -205,7 +205,8 @@ exports.getSuggestions = async (req, res) => {
         problems: allProblems,
         goodPoints: allGoodPoints
       }, { timeout: 10000 });
-
+        console.log("AI suggestions response:", aiResponse.data);
+        console.log("AI suggestions response data:", aiResponse.data.suggestions);
       if (aiResponse.data && aiResponse.data.suggestions) {
         suggestions = aiResponse.data.suggestions;
       }
