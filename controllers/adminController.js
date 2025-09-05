@@ -171,7 +171,14 @@ exports.getSuggestions = async (req, res) => {
     // 1. Fetch all reviews from DB
     const reviews = await Review.find({});
     if (!reviews.length) {
-      return res.json({ success: true, insights: { problems: [], goodPoints: [], suggestions: "No reviews yet" } });
+      return res.json({ 
+        success: true, 
+        insights: { 
+          problems: [], 
+          goodPoints: [], 
+          suggestions: "No reviews yet" 
+        } 
+      });
     }
 
     // 2. Aggregate raw problems and good points
@@ -191,13 +198,20 @@ exports.getSuggestions = async (req, res) => {
     const problemCounts = countItems(allProblems);
     const goodPointCounts = countItems(allGoodPoints);
 
-    // 3. Call Python AI microservice to generate summary
-    const aiResponse = await axios.post(`${AI_SERVICE_URL}/suggestions`, {
-      problems: allProblems,
-      goodPoints: allGoodPoints
-    });
+    // 3. Call Python AI microservice
+    let suggestions = "suggestions are not available at this moment";
+    try {
+      const aiResponse = await axios.post(`${AI_SERVICE_URL}/suggestions`, {
+        problems: allProblems,
+        goodPoints: allGoodPoints
+      }, { timeout: 10000 });
 
-    const { suggestions} = aiResponse.data;
+      if (aiResponse.data && aiResponse.data.suggestions) {
+        suggestions = aiResponse.data.suggestions;
+      }
+    } catch (aiErr) {
+      console.error("AI service error in getSuggestions:", aiErr.message);
+    }
 
     // 4. Return combined insights
     res.json({
@@ -210,7 +224,7 @@ exports.getSuggestions = async (req, res) => {
     });
 
   } catch (err) {
-    // console.error('suggestions error:', err);
+    console.error("getSuggestions endpoint error:", err.message);
     res.status(500).json({ success: false, error: 'Failed to fetch suggestions' });
   }
 };
