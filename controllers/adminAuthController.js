@@ -7,9 +7,6 @@ const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',
 
 
 function makeTransporter() {
-  // Generic SMTP (works great with Ethereal or any SMTP)
-  // ETHEREAL: host=smtp.ethereal.email, port=587, secure=false
-  // GMAIL (less secure): host=smtp.gmail.com, port=465, secure=true
   return nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port: Number(process.env.EMAIL_PORT),
@@ -68,7 +65,8 @@ exports.requestAdminOTP = async (req, res) => {
           to: email,
           subject: 'Your OTP Code',
           text: `Your OTP is ${OTP}. It expires in 5 minutes.`,
-          html: `<p>Your OTP is <b>${OTP }</b>. It expires in 5 minutes.</p>`,
+          html: `<h2>Hello Admin, Welcome to ReviewAI 🎉</h2>
+      <p>Your OTP is <b>${OTP}</b>. It expires in 5 minutes.</p>`,
         });
     
         // If using Ethereal, you can log the preview URL for testing:
