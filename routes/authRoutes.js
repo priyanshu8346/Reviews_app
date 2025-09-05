@@ -1,4 +1,5 @@
-// Auth routes
+
+// Auth routes for user OTP authentication
 const express = require('express');
 const router = express.Router();
 const {sendOTP, verifyOTP} = require('../controllers/authController');

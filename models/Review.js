@@ -1,4 +1,5 @@
-// Review model
+
+// Review model for storing user reviews and AI analysis
 const mongoose = require('mongoose');
 
 const reviewSchema = new mongoose.Schema(
@@ -16,6 +17,11 @@ const reviewSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Log when a review is created or updated (for debugging)
+reviewSchema.post('save', function(doc) {
+  console.log(`[ReviewModel] Review saved: user=${doc.user}, rating=${doc.rating}, sentiment=${doc.sentiment}`);
+});
 
 module.exports = mongoose.model('Review', reviewSchema);
 

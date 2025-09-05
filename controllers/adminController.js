@@ -4,6 +4,8 @@ const axios = require('axios');
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
 // 1. List reviews (with filters & pagination)
+
+// List reviews with optional filters and pagination (admin only)
 exports.listReviews = async (req, res) => {
   try {
     const { sentiment, spam, page = 1, limit = 20 } = req.query;
@@ -20,16 +22,16 @@ exports.listReviews = async (req, res) => {
     const total = await Review.countDocuments(filter);
 
     const ratingCounts = await Review.aggregate([
-  { $match: filter },
-  { $group: { _id: "$rating", count: { $sum: 1 } } },
-  { $project: { _id: 0, rating: "$_id", count: 1 } }
-]);
+      { $match: filter },
+      { $group: { _id: "$rating", count: { $sum: 1 } } },
+      { $project: { _id: 0, rating: "$_id", count: 1 } }
+    ]);
 
-// Normalize to always have 1–5 keys
-const counts = { 1:0, 2:0, 3:0, 4:0, 5:0 };
-ratingCounts.forEach(r => { counts[r.rating] = r.count; });
+    // Normalize to always have 1–5 keys
+    const counts = { 1:0, 2:0, 3:0, 4:0, 5:0 };
+    ratingCounts.forEach(r => { counts[r.rating] = r.count; });
 
-// Sentiment distribution
+    // Sentiment distribution
     const sentimentAgg = await Review.aggregate([
       { $match: filter },
       { $group: { _id: "$sentiment", count: { $sum: 1 } } }
@@ -40,29 +42,32 @@ ratingCounts.forEach(r => { counts[r.rating] = r.count; });
       return { name: s.charAt(0).toUpperCase() + s.slice(1), value: found ? found.count : 0 };
     });
 
-res.json({ 
-  success: true, 
-  total, 
-  page: Number(page), 
-  limit: Number(limit), 
-  reviews,
-  ratingDistribution: counts,
-  satisfaction: sentimentCounts
-});
-
+    console.log(`[AdminController] Listed ${reviews.length} reviews (page ${page})`);
+    res.json({ 
+      success: true, 
+      total, 
+      page: Number(page), 
+      limit: Number(limit), 
+      reviews,
+      ratingDistribution: counts,
+      satisfaction: sentimentCounts
+    });
   } catch (err) {
-    // console.error("Error in listReviews:", err);
+    console.error('[AdminController] listReviews error:', err);
     res.status(500).json({ success: false, error: 'Failed to fetch reviews' });
   }
 };
 
 // 2. Mark/unmark review as spam
+
+// Mark or unmark a review as spam (admin only)
 exports.markSpam = async (req, res) => {
   try {
     const { id } = req.params;
     const { spam } = req.body;
 
     if (typeof spam !== 'boolean') {
+      console.warn('[AdminController] Spam must be true or false');
       return res.status(400).json({ success: false, error: 'Spam must be true or false' });
     }
 
@@ -73,12 +78,14 @@ exports.markSpam = async (req, res) => {
     );
 
     if (!review) {
+      console.warn(`[AdminController] Review not found for spam update: id=${id}`);
       return res.status(404).json({ success: false, error: 'Review not found' });
     }
 
+    console.log(`[AdminController] Review spam status updated: id=${id}, spam=${spam}`);
     res.json({ success: true, review });
   } catch (err) {
-    // console.error("Error in markSpam:", err);
+    console.error('[AdminController] markSpam error:', err);
     res.status(500).json({ success: false, error: 'Failed to update review' });
   }
 };

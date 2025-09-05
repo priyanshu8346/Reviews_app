@@ -1,3 +1,4 @@
+
 // Entry point for the backend server
 const express = require('express');
 const cors = require('cors');
@@ -9,24 +10,29 @@ const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
-//midlleware
-// Use CORS and JSON parsing middleware
+// Middleware setup
 app.use(cors());
 app.use(express.json());
 app.use('/auth', authRoutes);
 app.use('/reviews', reviewRoutes);
 app.use('/admin', adminRoutes);
 
+// Health check route
+app.get('/', (req, res) => {
+  console.log('Health check: API is running...');
+  res.send('API is running...');
+});
 
-
-// Routes
-app.get('/', (req, res) => res.send('API is running...'));
-
-// Start server
+// Start server and connect to DB
 const PORT = process.env.PORT || 5000;
 const startServer = async () => {
-  await connectDB();
-  app.listen(process.env.PORT, () => console.log(`Server running on ${process.env.PORT}`));
+  try {
+    await connectDB();
+    app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
 };
 
 startServer();

@@ -28,6 +28,8 @@ function generateOTP() {
 }
 
 // Step 1: Request OTP
+
+// Send OTP to admin email for authentication
 exports.requestAdminOTP = async (req, res) => {
   try {
     const { email } = req.body;
@@ -35,6 +37,7 @@ exports.requestAdminOTP = async (req, res) => {
 
     // Check if email is in allowed admin list
     if (!adminEmails.includes(normalizedEmail)) {
+      console.warn(`[AdminAuthController] Not authorized as admin: ${normalizedEmail}`);
       return res.status(403).json({ success: false, error: 'Not authorized as admin' });
     }
 
@@ -72,17 +75,17 @@ exports.requestAdminOTP = async (req, res) => {
         // If using Ethereal, you can log the preview URL for testing:
         console.log('Preview URL:', nodemailer.getTestMessageUrl(info));
 
-    
-        return res.json({ success: true, message: "OTP sent succesfully" });
-    
-
+    console.log(`[AdminAuthController] Admin OTP sent to ${email}`);
+    return res.json({ success: true, message: "OTP sent succesfully" });
   } catch (err) {
-    // console.error("Error in requestAdminOtp:", err);
+    console.error('[AdminAuthController] requestAdminOTP error:', err);
     res.status(500).json({ success: false, error: 'Failed to send OTP' });
   }
 };
 
 // Step 2: Verify OTP
+
+// Verify OTP and issue JWT for admin authentication
 exports.verifyAdminOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -90,26 +93,31 @@ exports.verifyAdminOTP = async (req, res) => {
 
     // Only emails in env are allowed
     if (!adminEmails.includes(normalizedEmail)) {
+      console.warn(`[AdminAuthController] Not authorized as admin: ${normalizedEmail}`);
       return res.status(403).json({ success: false, error: 'Not authorized as admin' });
     }
 
     const user = await User.findOne({ email: normalizedEmail, role: 'admin' });
     if (!user) {
+      console.warn(`[AdminAuthController] Admin not found for email: ${normalizedEmail}`);
       return res.status(404).json({ success: false, error: 'Admin not found, request OTP again' });
     }
 
-        if (!user || !user.OTPHash || !user.OTPExpiry) {
-          return res.status(400).json({ error: 'OTP not requested or user not found' });
-        }
-    
-        if (user.OTPExpiry < new Date()) {
-          return res.status(400).json({ error: 'OTP expired' });
-        }
-    
-        const isMatch = user.OTPHash === hashOTP(otp);
-        if (!isMatch) {
-          return res.status(400).json({ error: 'Invalid OTP' });
-        }
+    if (!user || !user.OTPHash || !user.OTPExpiry) {
+      console.warn(`[AdminAuthController] OTP not requested or user not found for email: ${normalizedEmail}`);
+      return res.status(400).json({ error: 'OTP not requested or user not found' });
+    }
+
+    if (user.OTPExpiry < new Date()) {
+      console.warn(`[AdminAuthController] OTP expired for email: ${normalizedEmail}`);
+      return res.status(400).json({ error: 'OTP expired' });
+    }
+
+    const isMatch = user.OTPHash === hashOTP(otp);
+    if (!isMatch) {
+      console.warn(`[AdminAuthController] Invalid OTP for email: ${normalizedEmail}`);
+      return res.status(400).json({ error: 'Invalid OTP' });
+    }
 
     // Clear OTP after success
     user.OTP = undefined;
@@ -125,10 +133,10 @@ exports.verifyAdminOTP = async (req, res) => {
       { expiresIn: '1h' }
     );
 
+    console.log(`[AdminAuthController] Admin OTP verified and JWT issued for ${normalizedEmail}`);
     res.json({ success: true, token });
-
   } catch (err) {
-    // console.error("Error in verifyAdminOtp:", err);
+    console.error('[AdminAuthController] verifyAdminOTP error:', err);
     res.status(500).json({ success: false, error: 'Failed to verify OTP' });
   }
 };
