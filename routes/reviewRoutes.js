@@ -6,7 +6,7 @@ const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
 const { createReview, getReviews, getMyLatestReview, updateReview, deleteReview} = require('../controllers/reviewController');
 
-router.post('/', auth, createReview);
+router.post('/createReview', auth, createReview);
 router.get('/getReviews', admin, getReviews);
 router.get('/my-latest', auth, getMyLatestReview);
 router.put('/:reviewId', auth, updateReview);    // Edit review
