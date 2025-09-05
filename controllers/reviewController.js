@@ -12,34 +12,54 @@ const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 exports.createReview = async (req, res) => {
   try {
     const { text, rating } = req.body || {};
-    if (!text || !rating) {
+    console.log('[ReviewController] Incoming review:', { text, rating });
+    console.log('[ReviewController] req.user:', req.user);
+
+    if (!text || rating == null) {
       console.warn('[ReviewController] Text and rating are required');
       return res.status(400).json({ error: 'Text and rating are required' });
     }
-    // Call Python AI microservice
-    const aiResponse = await axios.post(`${AI_SERVICE_URL}/analyze`, { text });
-    const { sentiment, score, spam, problems, goodPoints  } = aiResponse.data;
 
-    // Save review with AI data
+    let aiResponseData;
+    try {
+      console.log('[ReviewController] Calling AI service at:', `${AI_SERVICE_URL}/analyze`);
+      const aiResponse = await axios.post(`${AI_SERVICE_URL}/analyze`, { text });
+      aiResponseData = aiResponse.data;
+      console.log('[ReviewController] AI response:', aiResponseData);
+    } catch (aiErr) {
+      console.error('[ReviewController] AI service error:', aiErr.message || aiErr);
+      return res.status(502).json({ error: 'AI service unavailable, please try again later' });
+    }
+
+    const { sentiment, score, spam, problems, goodPoints } = aiResponseData || {};
+
     const review = new Review({
-      user: req.user.userId,
+      user: req.user?.userId,
       text,
       rating,
       sentiment,
       aiScore: score,
       spam,
       problems,
-      goodPoints
+      goodPoints,
     });
-    await review.save();
 
-    console.log(`[ReviewController] Review created for user ${req.user.userId}, sentiment: ${sentiment}`);
-    res.json({ success: true, review });
+    console.log('[ReviewController] Review before save:', review);
+
+    try {
+      await review.save();
+      console.log(`[ReviewController] Review created for user ${req.user?.userId}, sentiment: ${sentiment}`);
+      res.json({ success: true, review });
+    } catch (dbErr) {
+      console.error('[ReviewController] Database save error:', dbErr);
+      return res.status(500).json({ success: false, error: 'Failed to save review in database' });
+    }
   } catch (err) {
-    console.error('[ReviewController] createReview error:', err);
-    res.status(500).json({ success: false, error: 'Failed to create review' });
+    console.error('[ReviewController] createReview unexpected error:', err);
+    res.status(500).json({ success: false, error: 'Unexpected server error' });
   }
 };
+
 
 /** GET /reviews  -> get all reviews (basic for now) */
 
