@@ -11,6 +11,5 @@ router.get('/', getReviews);
 router.get('/my-latest', auth, getMyLatestReview);
 router.put('/:reviewId', auth, updateReview);    // Edit review
 router.delete('/:reviewId', auth, deleteReview); // Delete review
-router.get('/insights', auth, admin, getInsights); // Get AI insights for all reviews
 
 module.exports = router;
