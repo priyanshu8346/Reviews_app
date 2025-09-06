@@ -206,20 +206,22 @@ exports.getSuggestions = async (req, res) => {
     const goodPointCounts = countItems(allGoodPoints);
 
     // 3. Call Python AI microservice
-    let suggestions = "suggestions are not available at this moment";
+    let suggestions = ["suggestions are not available at this moment"];
     try {
       const aiResponse = await axios.post(`${AI_SERVICE_URL}/suggestions`, {
         problems: allProblems,
         goodPoints: allGoodPoints
       }, { timeout: 10000 });
-        console.log("AI suggestions response:", aiResponse.data);
-        console.log("AI suggestions response data:", aiResponse.data.suggestions);
-      if (aiResponse.data && aiResponse.data.suggestions) {
-        suggestions = aiResponse.data.suggestions;
-      }
-    } catch (aiErr) {
+
+    console.log("AI suggestions response:", aiResponse.data);
+
+    if (aiResponse.data && Array.isArray(aiResponse.data.suggestions)) {
+      suggestions = aiResponse.data.suggestions;
+    }
+    }catch (aiErr) {
       console.error("AI service error in getSuggestions:", aiErr.message);
     }
+
 
     // 4. Return combined insights
     res.json({
